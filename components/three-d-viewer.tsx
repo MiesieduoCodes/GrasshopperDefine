@@ -1,7 +1,9 @@
 "use client"
 
 import { Suspense, useState, useEffect, useRef } from "react"
-import * as THREE from "three"
+
+// Dynamic import to prevent SSR issues
+let THREE: any = null
 
 interface GeometryMesh {
   vertices: number[]
@@ -16,181 +18,224 @@ interface ThreeDViewerProps {
 }
 
 function ThreeDScene({ geometry }: { geometry: GeometryMesh }) {
-  const [scene, setScene] = useState<THREE.Scene | null>(null)
-  const [camera, setCamera] = useState<THREE.PerspectiveCamera | null>(null)
-  const [renderer, setRenderer] = useState<THREE.WebGLRenderer | null>(null)
-  const [mesh, setMesh] = useState<THREE.Mesh | null>(null)
+  const [scene, setScene] = useState<any>(null)
+  const [camera, setCamera] = useState<any>(null)
+  const [renderer, setRenderer] = useState<any>(null)
+  const [mesh, setMesh] = useState<any>(null)
   const [container, setContainer] = useState<HTMLDivElement | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [hasError, setHasError] = useState(false)
   const animationRef = useRef<number>()
 
   useEffect(() => {
-    if (!container || !geometry) return
-
-    // Initialize Three.js scene
-    const newScene = new THREE.Scene()
-    newScene.background = new THREE.Color(0xf8fafc) // slate-50
-
-    // Camera setup
-    const newCamera = new THREE.PerspectiveCamera(
-      75,
-      container.clientWidth / container.clientHeight,
-      0.1,
-      1000
-    )
-    newCamera.position.set(5, 5, 5)
-    newCamera.lookAt(0, 0, 0)
-
-    // Renderer setup
-    const newRenderer = new THREE.WebGLRenderer({ antialias: true })
-    newRenderer.setSize(container.clientWidth, container.clientHeight)
-    newRenderer.shadowMap.enabled = true
-    newRenderer.shadowMap.type = THREE.PCFSoftShadowMap
-
-    // Clear previous content
-    container.innerHTML = ""
-    container.appendChild(newRenderer.domElement)
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.4)
-    newScene.add(ambientLight)
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
-    directionalLight.position.set(10, 10, 5)
-    directionalLight.castShadow = true
-    newScene.add(directionalLight)
-
-    // Create geometry from vertices and faces
-    if (geometry.vertices.length > 0 && geometry.faces.length > 0) {
-      const geometryBuffer = new THREE.BufferGeometry()
-      
-      // Set vertices
-      const vertices = new Float32Array(geometry.vertices)
-      geometryBuffer.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
-      
-      // Set faces (indices)
-      const indices = new Uint32Array(geometry.faces)
-      geometryBuffer.setIndex(new THREE.BufferAttribute(indices, 1))
-      
-      // Set normals if available, otherwise compute them
-      if (geometry.normals && geometry.normals.length > 0) {
-        const normals = new Float32Array(geometry.normals)
-        geometryBuffer.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
-      } else {
-        geometryBuffer.computeVertexNormals()
-      }
-      
-      // Create material with better visual properties
-      const material = new THREE.MeshStandardMaterial({
-        color: 0x4ade80, // green-500
-        transparent: true,
-        opacity: 0.9,
-        side: THREE.DoubleSide,
-        metalness: 0.1,
-        roughness: 0.3
-      })
-      
-      // Create mesh
-      const newMesh = new THREE.Mesh(geometryBuffer, material)
-      newMesh.castShadow = true
-      newMesh.receiveShadow = true
-      newScene.add(newMesh)
-      setMesh(newMesh)
-    }
-
-    // Add grid helper
-    const gridHelper = new THREE.GridHelper(20, 20, 0xe2e8f0, 0xcbd5e1)
-    gridHelper.position.y = -2
-    newScene.add(gridHelper)
-
-    // Mouse controls
-    const handleMouseDown = (event: MouseEvent) => {
-      setIsDragging(true)
-      setMousePosition({ x: event.clientX, y: event.clientY })
-    }
-
-    const handleMouseMove = (event: MouseEvent) => {
-      if (isDragging && newMesh) {
-        const deltaX = event.clientX - mousePosition.x
-        const deltaY = event.clientY - mousePosition.y
-        
-        newMesh.rotation.y += deltaX * 0.01
-        newMesh.rotation.x += deltaY * 0.01
-        
-        setMousePosition({ x: event.clientX, y: event.clientY })
+    // Dynamically import Three.js to prevent SSR issues
+    const loadThreeJS = async () => {
+      try {
+        if (!THREE) {
+          THREE = await import("three")
+        }
+      } catch (error) {
+        console.error("Failed to load Three.js:", error)
+        setHasError(true)
+        return
       }
     }
 
-    const handleMouseUp = () => {
-      setIsDragging(false)
-    }
+    const initScene = async () => {
+      if (!container || !geometry || !THREE) return
 
-    const handleWheel = (event: WheelEvent) => {
-      if (newCamera) {
-        const zoomSpeed = 0.1
-        const zoom = event.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed
-        newCamera.position.multiplyScalar(zoom)
-      }
-    }
+      try {
+        // Initialize Three.js scene
+        const newScene = new THREE.Scene()
+        newScene.background = new THREE.Color(0xf8fafc) // slate-50
 
-    // Add event listeners
-    container.addEventListener('mousedown', handleMouseDown)
-    container.addEventListener('mousemove', handleMouseMove)
-    container.addEventListener('mouseup', handleMouseUp)
-    container.addEventListener('wheel', handleWheel)
+        // Camera setup
+        const newCamera = new THREE.PerspectiveCamera(
+          75,
+          container.clientWidth / container.clientHeight,
+          0.1,
+          1000
+        )
+        newCamera.position.set(5, 5, 5)
+        newCamera.lookAt(0, 0, 0)
 
-    // Animation loop
-    const animate = () => {
-      animationRef.current = requestAnimationFrame(animate)
-      
-      // Gentle rotation when not dragging
-      if (newMesh && !isDragging) {
-        newMesh.rotation.y += 0.005
-      }
-      
-      newRenderer.render(newScene, newCamera)
-    }
-    animate()
+        // Renderer setup
+        const newRenderer = new THREE.WebGLRenderer({ antialias: true })
+        newRenderer.setSize(container.clientWidth, container.clientHeight)
+        newRenderer.shadowMap.enabled = true
+        newRenderer.shadowMap.type = THREE.PCFSoftShadowMap
 
-    // Handle window resize
-    const handleResize = () => {
-      if (container) {
-        const width = container.clientWidth
-        const height = container.clientHeight
-        
-        newCamera.aspect = width / height
-        newCamera.updateProjectionMatrix()
-        newRenderer.setSize(width, height)
-      }
-    }
-    window.addEventListener('resize', handleResize)
-
-    // Store references
-    setScene(newScene)
-    setCamera(newCamera)
-    setRenderer(newRenderer)
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      container.removeEventListener('mousedown', handleMouseDown)
-      container.removeEventListener('mousemove', handleMouseMove)
-      container.removeEventListener('mouseup', handleMouseUp)
-      container.removeEventListener('wheel', handleWheel)
-      
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
-      
-      if (newRenderer) {
-        newRenderer.dispose()
-      }
-      if (container) {
+        // Clear previous content
         container.innerHTML = ""
+        container.appendChild(newRenderer.domElement)
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.4)
+        newScene.add(ambientLight)
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8)
+        directionalLight.position.set(10, 10, 5)
+        directionalLight.castShadow = true
+        newScene.add(directionalLight)
+
+        // Create geometry from vertices and faces
+        if (geometry.vertices.length > 0 && geometry.faces.length > 0) {
+          const geometryBuffer = new THREE.BufferGeometry()
+          
+          // Set vertices
+          const vertices = new Float32Array(geometry.vertices)
+          geometryBuffer.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
+          
+          // Set faces (indices)
+          const indices = new Uint32Array(geometry.faces)
+          geometryBuffer.setIndex(new THREE.BufferAttribute(indices, 1))
+          
+          // Set normals if available, otherwise compute them
+          if (geometry.normals && geometry.normals.length > 0) {
+            const normals = new Float32Array(geometry.normals)
+            geometryBuffer.setAttribute('normal', new THREE.BufferAttribute(normals, 3))
+          } else {
+            geometryBuffer.computeVertexNormals()
+          }
+          
+          // Create material with better visual properties
+          const material = new THREE.MeshStandardMaterial({
+            color: 0x4ade80, // green-500
+            transparent: true,
+            opacity: 0.9,
+            side: THREE.DoubleSide,
+            metalness: 0.1,
+            roughness: 0.3
+          })
+          
+          // Create mesh
+          const newMesh = new THREE.Mesh(geometryBuffer, material)
+          newMesh.castShadow = true
+          newMesh.receiveShadow = true
+          newScene.add(newMesh)
+          setMesh(newMesh)
+        }
+
+        // Add grid helper
+        const gridHelper = new THREE.GridHelper(20, 20, 0xe2e8f0, 0xcbd5e1)
+        gridHelper.position.y = -2
+        newScene.add(gridHelper)
+
+        // Mouse controls
+        const handleMouseDown = (event: MouseEvent) => {
+          setIsDragging(true)
+          setMousePosition({ x: event.clientX, y: event.clientY })
+        }
+
+        const handleMouseMove = (event: MouseEvent) => {
+          if (isDragging && newMesh) {
+            const deltaX = event.clientX - mousePosition.x
+            const deltaY = event.clientY - mousePosition.y
+            
+            newMesh.rotation.y += deltaX * 0.01
+            newMesh.rotation.x += deltaY * 0.01
+            
+            setMousePosition({ x: event.clientX, y: event.clientY })
+          }
+        }
+
+        const handleMouseUp = () => {
+          setIsDragging(false)
+        }
+
+        const handleWheel = (event: WheelEvent) => {
+          if (newCamera) {
+            const zoomSpeed = 0.1
+            const zoom = event.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed
+            newCamera.position.multiplyScalar(zoom)
+          }
+        }
+
+        // Add event listeners
+        container.addEventListener('mousedown', handleMouseDown)
+        container.addEventListener('mousemove', handleMouseMove)
+        container.addEventListener('mouseup', handleMouseUp)
+        container.addEventListener('wheel', handleWheel)
+
+        // Animation loop
+        const animate = () => {
+          animationRef.current = requestAnimationFrame(animate)
+          
+          // Gentle rotation when not dragging
+          if (newMesh && !isDragging) {
+            newMesh.rotation.y += 0.005
+          }
+          
+          newRenderer.render(newScene, newCamera)
+        }
+        animate()
+
+        // Handle window resize
+        const handleResize = () => {
+          if (container) {
+            const width = container.clientWidth
+            const height = container.clientHeight
+            
+            newCamera.aspect = width / height
+            newCamera.updateProjectionMatrix()
+            newRenderer.setSize(width, height)
+          }
+        }
+        window.addEventListener('resize', handleResize)
+
+        // Store references
+        setScene(newScene)
+        setCamera(newCamera)
+        setRenderer(newRenderer)
+
+        // Cleanup
+        return () => {
+          window.removeEventListener('resize', handleResize)
+          container.removeEventListener('mousedown', handleMouseDown)
+          container.removeEventListener('mousemove', handleMouseMove)
+          container.removeEventListener('mouseup', handleMouseUp)
+          container.removeEventListener('wheel', handleWheel)
+          
+          if (animationRef.current) {
+            cancelAnimationFrame(animationRef.current)
+          }
+          
+          if (newRenderer) {
+            newRenderer.dispose()
+          }
+          if (container) {
+            container.innerHTML = ""
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing Three.js scene:", error)
+        setHasError(true)
       }
     }
-  }, [container, geometry, isDragging, mousePosition])
+
+    loadThreeJS().then(() => {
+      if (!hasError) {
+        initScene()
+      }
+    })
+  }, [container, geometry, isDragging, mousePosition, hasError])
+
+  if (hasError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-slate-100 rounded-lg">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <p className="text-sm text-red-600">3D Viewer Error</p>
+          <p className="text-xs text-red-400 mt-1">Failed to load 3D viewer</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div 
@@ -270,9 +315,9 @@ export function ThreeDViewer({ geometry, loading }: ThreeDViewerProps) {
       )}
 
       <div className="w-full h-full">
-        <Suspense fallback={<LoadingFallback />}>
+      <Suspense fallback={<LoadingFallback />}>
           <GeometryRenderer geometry={geometry} />
-        </Suspense>
+      </Suspense>
       </div>
     </div>
   )

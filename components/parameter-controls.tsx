@@ -93,16 +93,16 @@ export function ParameterControls({ parameters, onChange, computing, onReset }: 
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center">
-            <Sliders className="w-5 h-5 mr-2" />
-            Parameters ({parameters.length})
+        <CardTitle className="flex items-center">
+          <Sliders className="w-5 h-5 mr-2" />
+          Parameters ({parameters.length})
             {computing && (
               <span className="ml-2 text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full flex items-center">
                 <Zap className="w-3 h-3 mr-1 animate-pulse" />
                 Computing
               </span>
             )}
-          </CardTitle>
+        </CardTitle>
           {onReset && (
             <button
               onClick={handleReset}
@@ -139,75 +139,75 @@ export function ParameterControls({ parameters, onChange, computing, onReset }: 
                     </span>
                   )}
                 </div>
-              </Label>
+            </Label>
 
-              {param.type === "number" && (
-                <div className="space-y-2">
-                  <Slider
-                    id={param.id}
-                    min={param.min || 0}
-                    max={param.max || 100}
-                    step={param.step || 1}
+            {param.type === "number" && (
+              <div className="space-y-2">
+                <Slider
+                  id={param.id}
+                  min={param.min || 0}
+                  max={param.max || 100}
+                  step={param.step || 1}
                     value={[currentValue]}
                     onValueChange={(value) => handleParameterChange(param.id, value[0])}
-                    disabled={computing}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-slate-500">
-                    <span>{param.min || 0}</span>
+                  disabled={computing}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-slate-500">
+                  <span>{param.min || 0}</span>
                     <span className={`font-medium ${hasChanged ? 'text-blue-600' : ''}`}>
                       {currentValue}
                     </span>
-                    <span>{param.max || 100}</span>
-                  </div>
+                  <span>{param.max || 100}</span>
                 </div>
-              )}
+              </div>
+            )}
 
-              {param.type === "boolean" && (
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id={param.id}
+            {param.type === "boolean" && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id={param.id}
                     checked={currentValue}
                     onCheckedChange={(checked) => handleParameterChange(param.id, checked)}
-                    disabled={computing}
-                  />
+                  disabled={computing}
+                />
                   <Label htmlFor={param.id} className={`text-sm ${hasChanged ? 'text-blue-600' : ''}`}>
                     {currentValue ? "On" : "Off"}
-                  </Label>
-                </div>
-              )}
+                </Label>
+              </div>
+            )}
 
-              {param.type === "color" && (
-                <div className="flex items-center space-x-2">
-                  <Input
-                    id={param.id}
-                    type="color"
-                    value={currentValue}
-                    onChange={(e) => handleParameterChange(param.id, e.target.value)}
-                    disabled={computing}
-                    className="w-16 h-10 p-1 border rounded"
-                  />
-                  <Input
-                    value={currentValue}
-                    onChange={(e) => handleParameterChange(param.id, e.target.value)}
-                    disabled={computing}
-                    className={`flex-1 ${hasChanged ? 'border-blue-300' : ''}`}
-                    placeholder="#000000"
-                  />
-                </div>
-              )}
-
-              {param.type === "text" && (
+            {param.type === "color" && (
+              <div className="flex items-center space-x-2">
                 <Input
                   id={param.id}
+                  type="color"
+                    value={currentValue}
+                    onChange={(e) => handleParameterChange(param.id, e.target.value)}
+                  disabled={computing}
+                  className="w-16 h-10 p-1 border rounded"
+                />
+                <Input
+                    value={currentValue}
+                    onChange={(e) => handleParameterChange(param.id, e.target.value)}
+                  disabled={computing}
+                    className={`flex-1 ${hasChanged ? 'border-blue-300' : ''}`}
+                  placeholder="#000000"
+                />
+              </div>
+            )}
+
+            {param.type === "text" && (
+              <Input
+                id={param.id}
                   value={currentValue}
                   onChange={(e) => handleParameterChange(param.id, e.target.value)}
-                  disabled={computing}
+                disabled={computing}
                   className={hasChanged ? 'border-blue-300' : ''}
-                  placeholder="Enter text..."
-                />
-              )}
-            </div>
+                placeholder="Enter text..."
+              />
+            )}
+          </div>
           )
         })}
       </CardContent>

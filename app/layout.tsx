@@ -5,8 +5,11 @@ import { GeistMono } from "geist/font/mono"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Grasshopper Runner",
-  description: "Created by Goofy",
+  title: "Grasshopper Runner - Visualize Grasshopper Definitions",
+  description: "Upload, visualize, and interact with Grasshopper definitions in real-time 3D",
+  keywords: ["Grasshopper", "3D", "Visualization", "Rhino", "Parametric Design"],
+  authors: [{ name: "Grasshopper Runner" }],
+  viewport: "width=device-width, initial-scale=1",
 }
 
 export default function RootLayout({
@@ -25,7 +28,9 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body className="antialiased">
+        {children}
+      </body>
     </html>
   )
 }
