@@ -80,6 +80,7 @@ function ThreeDScene({ geometry }: { geometry: GeometryMesh }) {
         newScene.add(directionalLight)
 
         // Create geometry from vertices and faces
+        let newMesh: any = null
         if (geometry.vertices.length > 0 && geometry.faces.length > 0) {
           const geometryBuffer = new THREE.BufferGeometry()
           
@@ -110,7 +111,7 @@ function ThreeDScene({ geometry }: { geometry: GeometryMesh }) {
           })
           
           // Create mesh
-          const newMesh = new THREE.Mesh(geometryBuffer, material)
+          newMesh = new THREE.Mesh(geometryBuffer, material)
           newMesh.castShadow = true
           newMesh.receiveShadow = true
           newScene.add(newMesh)
@@ -246,7 +247,7 @@ function ThreeDScene({ geometry }: { geometry: GeometryMesh }) {
   )
 }
 
-function GeometryRenderer({ geometry }: { geometry: GeometryMesh }) {
+function GeometryRenderer({ geometry }: { geometry: GeometryMesh | null }) {
   const [hasError, setHasError] = useState(false)
 
   if (!geometry || !geometry.vertices || !geometry.faces) {

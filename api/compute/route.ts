@@ -20,21 +20,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Definition not found" }, { status: 404 })
     }
 
-    // Convert parameters array to object
-    const parameterValues = parameters.reduce((acc: Record<string, any>, param: any) => {
-      acc[param.name.toLowerCase().replace(/\s+/g, "_")] = param.value
-      return acc
-    }, {})
+    // Convert parameters to the correct format expected by RhinoComputeService
+    const formattedParameters = parameters.map((param: any) => ({
+      id: param.name,
+      name: param.name,
+      type: param.type || "number",
+      value: param.value
+    }))
 
     // Compute geometry using Rhino.Compute
-    const computeResult = await RhinoComputeService.computeGeometry("", parameterValues)
+    const computeResult = await RhinoComputeService.computeGeometry(storedDefinition.originalFileBuffer, formattedParameters)
 
     return NextResponse.json({
-      geometry: computeResult.geometry[0],
-      mesh: computeResult.geometry[0],
-      curves: computeResult.curves,
-      points: computeResult.points,
-      metadata: computeResult.metadata,
+      geometry: computeResult,
+      mesh: computeResult,
+      curves: [],
+      points: [],
+      metadata: {},
       cached: false,
     })
   } catch (error) {

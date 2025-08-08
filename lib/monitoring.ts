@@ -15,9 +15,7 @@ Sentry.init({
     return event
   },
   integrations: [
-    new Sentry.BrowserTracing({
-      tracingOrigins: [process.env.NEXT_PUBLIC_APP_URL || "localhost"],
-    }),
+    // Remove BrowserTracing as it's not available in this version
   ],
 })
 
@@ -65,9 +63,7 @@ class MonitoringService {
 
   // Track cache performance
   trackCacheHit(hit: boolean) {
-    const transaction = Sentry.getCurrentHub().getScope()?.getTransaction()
-    transaction?.setTag("cache_hit", hit)
-
+    // Remove transaction tracking as it's not available in this version
     Sentry.addBreadcrumb({
       message: "Cache access",
       data: { hit },
@@ -115,7 +111,8 @@ class MonitoringService {
 
   // Performance monitoring
   startTransaction(name: string, operation: string) {
-    return Sentry.startTransaction({ name, op: operation })
+    // Remove transaction tracking as it's not available in this version
+    return null
   }
 
   // User feedback
@@ -125,12 +122,15 @@ class MonitoringService {
     comments: string
   }) {
     const user = Sentry.getCurrentHub().getScope()?.getUser()
-    Sentry.captureUserFeedback({
-      event_id: Sentry.lastEventId(),
-      name: feedback.name || user?.username || "Anonymous",
-      email: feedback.email || user?.email || "unknown@example.com",
-      comments: feedback.comments,
-    })
+    const eventId = Sentry.lastEventId()
+    if (eventId) {
+      Sentry.captureUserFeedback({
+        event_id: eventId,
+        name: feedback.name || user?.username || "Anonymous",
+        email: feedback.email || user?.email || "unknown@example.com",
+        comments: feedback.comments,
+      })
+    }
   }
 
   getMetrics(): PerformanceMetrics {

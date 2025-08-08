@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       .join("_")
     const filename = `${storedDefinition.name}_${paramSummary}_${timestamp}.gh`
 
-    return new NextResponse(modifiedFile, {
+    return new NextResponse(modifiedFile as any, {
       headers: {
         "Content-Type": "application/octet-stream",
         "Content-Disposition": `attachment; filename="${filename}"`,

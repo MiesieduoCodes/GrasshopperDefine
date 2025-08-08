@@ -1,25 +1,25 @@
 // Simple in-memory cache for development
-const cache = new Map<string, { data: any; expires: number }>()
+const cacheMap = new Map<string, { data: any; expires: number }>()
 
 export const cache = {
   async getCachedGeometry(definitionHash: string, parametersHash: string) {
     const key = `${definitionHash}:${parametersHash}`
-    const cached = cache.get(key)
+    const cached = cacheMap.get(key)
     
     if (cached && cached.expires > Date.now()) {
       return cached.data
     }
     
     if (cached) {
-      cache.delete(key)
+      cacheMap.delete(key)
     }
     
-        return null
+    return null
   },
 
   async cacheGeometry(definitionHash: string, parametersHash: string, geometry: any, ttlSeconds: number) {
     const key = `${definitionHash}:${parametersHash}`
-    cache.set(key, {
+    cacheMap.set(key, {
       data: geometry,
       expires: Date.now() + (ttlSeconds * 1000)
     })
@@ -31,7 +31,7 @@ export const cache = {
     const now = Date.now()
     const window = now - (windowSeconds * 1000)
     
-    const requests = cache.get(key)?.data || []
+    const requests = cacheMap.get(key)?.data || []
     const recentRequests = requests.filter((timestamp: number) => timestamp > window)
     
     if (recentRequests.length >= maxRequests) {
@@ -39,12 +39,12 @@ export const cache = {
     }
     
     recentRequests.push(now)
-    cache.set(key, { data: recentRequests, expires: now + (windowSeconds * 1000) })
+    cacheMap.set(key, { data: recentRequests, expires: now + (windowSeconds * 1000) })
     
     return true
   },
 
   async disconnect() {
-    cache.clear()
+    cacheMap.clear()
   }
 }
