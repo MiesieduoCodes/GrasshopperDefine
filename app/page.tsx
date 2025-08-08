@@ -25,7 +25,9 @@ interface Parameter {
   step?: number
 }
 
-export default function HomePage() {
+import { ErrorBoundary } from "@/components/error-boundary"
+
+function HomePage() {
   const [definition, setDefinition] = useState<Definition | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -182,5 +184,13 @@ export default function HomePage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <ErrorBoundary>
+      <HomePage />
+    </ErrorBoundary>
   )
 }

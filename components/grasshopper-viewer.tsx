@@ -149,7 +149,12 @@ export function GrasshopperViewer({ definition, onReset }: GrasshopperViewerProp
 
           {/* Parameter Controls */}
           <div>
-            <ParameterControls parameters={parameters} onChange={handleParameterChange} computing={computing} />
+            <ParameterControls 
+              parameters={parameters} 
+              onChange={handleParameterChange} 
+              computing={computing}
+              onReset={resetParameters}
+            />
           </div>
         </div>
       </div>
