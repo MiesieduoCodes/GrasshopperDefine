@@ -14,11 +14,13 @@ interface Definition {
 interface Parameter {
   id: string
   name: string
-  type: "number" | "boolean" | "color" | "text"
+  type: "number" | "boolean" | "color" | "text" | "integer" | "point" | "vector" | "curve" | "surface" | "brep" | "mesh" | "domain"
   value: any
   min?: number
   max?: number
   step?: number
+  guid?: string
+  componentType?: string
 }
 
 const definitions = new Map<string, Definition>()

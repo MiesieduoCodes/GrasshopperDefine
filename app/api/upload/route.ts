@@ -45,50 +45,104 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid Grasshopper file format." }, { status: 400 })
     }
 
-    // Parse the Grasshopper definition
+    // Parse the Grasshopper definition with enhanced error handling
     console.log("Parsing Grasshopper definition...")
-    const parsedDefinition = await GrasshopperParser.parseDefinition(fileBuffer, file.name)
-    console.log(`Parsed definition: ${parsedDefinition.name}`)
-    console.log(
-      `Found ${parsedDefinition.parameters.length} parameters:`,
-      parsedDefinition.parameters.map((p) => `${p.name} (${p.type})`),
-    )
-
-    // Generate initial geometry using Rhino.Compute
-    console.log("Generating initial geometry with Rhino.Compute...")
-    
-    // Convert parameters to the format expected by RhinoComputeService
-    const parametersForCompute = parsedDefinition.parameters.map(param => ({
-      id: param.id,
-      name: param.name,
-      type: param.type,
-      value: param.value
-    }))
-    
-    const initialGeometry = await RhinoComputeService.computeGeometry(fileBuffer, parametersForCompute)
-    console.log(`Generated geometry with ${initialGeometry.vertices.length / 3} vertices`)
-
-    // Store in memory with original file buffer
-    const definitionId = `def_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const definition = {
-      ...parsedDefinition,
-      id: definitionId,
-      geometry: initialGeometry,
-      originalFileBuffer: fileBuffer,
-      uploadedAt: new Date().toISOString(),
+    let parsedDefinition
+    try {
+      parsedDefinition = await GrasshopperParser.parseDefinition(fileBuffer, file.name)
+      console.log(`✅ Parsed definition: ${parsedDefinition.name}`)
+      console.log(
+        `📊 Found ${parsedDefinition.parameters.length} parameters:`,
+        parsedDefinition.parameters.map((p) => `${p.name} (${p.type})`),
+      )
+    } catch (parseError) {
+      console.error("❌ Failed to parse Grasshopper definition:", parseError)
+      return NextResponse.json({ 
+        error: "Failed to parse Grasshopper definition", 
+        details: parseError instanceof Error ? parseError.message : "Unknown parsing error"
+      }, { status: 400 })
     }
 
-    setDefinition(definitionId, definition)
-    console.log(`Definition stored with ID: ${definitionId}`)
+    // Generate initial geometry using Rhino.Compute with fallback
+    console.log("🔄 Generating initial geometry with Rhino.Compute...")
+    let initialGeometry
+    try {
+      // Convert parameters to the format expected by RhinoComputeService
+      const parametersForCompute = parsedDefinition.parameters.map(param => ({
+        id: param.id,
+        name: param.name,
+        type: param.type,
+        value: param.value
+      }))
+      
+      initialGeometry = await RhinoComputeService.computeGeometry(fileBuffer, parametersForCompute)
+      console.log(`✅ Generated geometry with ${initialGeometry.vertices.length / 3} vertices`)
+    } catch (computeError) {
+      console.warn("⚠️ Rhino.Compute failed, using fallback geometry:", computeError)
+      
+      // Fallback to basic geometry when Rhino.Compute fails
+      initialGeometry = {
+        vertices: [
+          -1, -1, 0,  1, -1, 0,  1, 1, 0,  -1, 1, 0,  // Base square
+          -1, -1, 1,  1, -1, 1,  1, 1, 1,  -1, 1, 1   // Top square
+        ],
+        faces: [
+          0, 1, 2,  0, 2, 3,  // Bottom face
+          4, 7, 6,  4, 6, 5,  // Top face
+          0, 4, 5,  0, 5, 1,  // Front face
+          2, 6, 7,  2, 7, 3,  // Back face
+          0, 3, 7,  0, 7, 4,  // Left face
+          1, 5, 6,  1, 6, 2   // Right face
+        ],
+        normals: []
+      }
+      
+      console.log("📦 Using fallback cube geometry")
+    }
 
-    return NextResponse.json({
-      id: definitionId,
-      name: definition.name,
-      description: definition.description,
-      parameters: definition.parameters,
-      geometry: definition.geometry,
-      metadata: definition.metadata,
-    })
+    // Store in memory with original file buffer and enhanced error handling
+    console.log("💾 Storing definition in memory...")
+    let definitionId
+    let definition
+    try {
+      definitionId = `def_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      definition = {
+        ...parsedDefinition,
+        id: definitionId,
+        geometry: initialGeometry,
+        originalFileBuffer: fileBuffer,
+        uploadedAt: new Date().toISOString(),
+      }
+
+      setDefinition(definitionId, definition)
+      console.log(`✅ Definition stored with ID: ${definitionId}`)
+    } catch (storageError) {
+      console.error("❌ Failed to store definition:", storageError)
+      return NextResponse.json({ 
+        error: "Failed to store definition", 
+        details: storageError instanceof Error ? storageError.message : "Storage error"
+      }, { status: 500 })
+    }
+
+    // Return successful response with comprehensive data
+    try {
+      return NextResponse.json({
+        id: definitionId,
+        name: definition.name,
+        description: definition.description,
+        parameters: definition.parameters,
+        geometry: definition.geometry,
+        metadata: definition.metadata,
+        status: "success",
+        message: initialGeometry.vertices.length > 24 ? "Geometry computed successfully" : "Using fallback geometry - Rhino.Compute may be unavailable"
+      })
+    } catch (responseError) {
+      console.error("❌ Failed to create response:", responseError)
+      return NextResponse.json({ 
+        error: "Failed to create response", 
+        details: responseError instanceof Error ? responseError.message : "Response error"
+      }, { status: 500 })
+    }
   } catch (error) {
     console.error("Upload error:", error)
     return NextResponse.json(
